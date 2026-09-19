@@ -2,7 +2,6 @@ package com.example.food_api.controller;
 
 import com.example.food_api.model.Food;
 import com.example.food_api.repository.FoodRepository;
-import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -17,41 +16,50 @@ public class FoodController {
         this.foodRepository = foodRepository;
     }
 
+    @PostMapping
+    public List<Food> addFoods(@RequestBody List<Food> foods) {
+        return foodRepository.saveAll(foods);
+    }
+
     @GetMapping
-    public List<Food> getAll() {
+    public List<Food> getAllFoods() {
         return foodRepository.findAll();
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<Food> getById(@PathVariable String id) {
-        return foodRepository.findById(id)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+    @GetMapping("/category/{categoryId}")
+    public List<Food> getFoodsByCategory(@PathVariable Long categoryId) {
+        return foodRepository.findByCategoryId(categoryId);
     }
 
-    @PostMapping
-    public Food create(@RequestBody Food food) {
-        food.setId(null);
-        return foodRepository.save(food);
+    @GetMapping("/recommended")
+    public List<Food> getRecommendedFoods() {
+        return foodRepository.findByRecommendedTrue();
+    }
+
+    @GetMapping("/{id}")
+    public Food getFoodById(@PathVariable Long id) {
+        return foodRepository.findByNumericId(id)
+                .orElseThrow(() -> new RuntimeException("Food not found"));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<Food> update(@PathVariable String id, @RequestBody Food updated) {
-        return foodRepository.findById(id)
-                .map(existing -> {
-                    existing.setName(updated.getName());
-                    existing.setPrice(updated.getPrice());
-                    return ResponseEntity.ok(foodRepository.save(existing));
-                })
-                .orElse(ResponseEntity.notFound().build());
-    }
+    public Food updateFood(
+            @PathVariable Long id,
+            @RequestBody Food food) {
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable String id) {
-        if (!foodRepository.existsById(id)) {
-            return ResponseEntity.notFound().build();
-        }
-        foodRepository.deleteById(id);
-        return ResponseEntity.noContent().build();
+        Food existingFood = foodRepository.findByNumericId(id)
+                .orElseThrow(() -> new RuntimeException("Food not found"));
+
+        existingFood.setCategoryId(food.getCategoryId());
+        existingFood.setName(food.getName());
+        existingFood.setPrices(food.getPrices());
+        existingFood.setRecommended(food.isRecommended());
+
+        existingFood.setDipIds(food.getDipIds());
+        existingFood.setAddOnIds(food.getAddOnIds());
+        existingFood.setCustomizationIds(food.getCustomizationIds());
+
+        existingFood.setFruitIds(food.getFruitIds());
+        return foodRepository.save(existingFood);
     }
 }
