@@ -84,4 +84,26 @@ public class CartController {
 
         return cartService.applyCoupon(cartId, couponCode);
     }
+
+    @GetMapping("/active")
+    public Cart getActiveCart() {
+
+        return cartRepository.findByNumericId(4L)
+                .orElseGet(() -> {
+
+                    Cart cart = new Cart();
+
+                    cart.setId(4L);
+                    cart.setItems(new java.util.ArrayList<>());
+
+                    cart.setSubtotal(0);
+                    cart.setDeliveryCharge(0);
+                    cart.setFreeDeliveryAbove(200);
+                    cart.setAmountForFreeDelivery(200);
+                    cart.setTotal(0);
+                    cart.setDiscountAmount(0);
+
+                    return cartRepository.save(cart);
+                });
+    }
 }
