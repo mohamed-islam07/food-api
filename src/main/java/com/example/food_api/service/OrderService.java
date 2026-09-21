@@ -191,7 +191,7 @@ public class OrderService {
                 .max(Long::compareTo)
                 .orElse(0L) + 1;
 
-        // Create new order
+        // Create new orde--r
         Order newOrder = new Order();
 
         newOrder.setId(nextOrderId);

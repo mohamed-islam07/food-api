@@ -35,38 +35,65 @@ public class CartService {
 
     public Cart addFoodToCart(Long cartId, CartItem cartItem) {
 
-        // Find cart
         Cart cart = cartRepository.findByNumericId(cartId)
                 .orElseThrow(() -> new RuntimeException("Cart not found"));
 
-        // Find food
-        Food food = foodRepository.findByNumericId(cartItem.getItemId())
+        // IMPORTANT: use itemId to identify the food
+        Long foodId = cartItem.getItemId();
+
+        if (foodId == null) {
+            throw new RuntimeException("Food itemId is missing");
+        }
+
+        Food food = foodRepository.findByNumericId(foodId)
                 .orElseThrow(() -> new RuntimeException("Food not found"));
 
-        // Get price
         double price = food.getPrices().values().iterator().next();
 
-        // Set food details
-        cartItem.setItemType("FOOD");
-        cartItem.setName(food.getName());
-        cartItem.setUnitPrice(price);
-
-        // Calculate item total
-        cartItem.setTotalPrice(price * cartItem.getQuantity());
-
-        // Get existing items
         List<CartItem> items = cart.getItems();
 
         if (items == null) {
             items = new java.util.ArrayList<>();
         }
 
-        // Add item
-        items.add(cartItem);
+        // Find existing food by itemId
+        CartItem existingItem = null;
+
+        for (CartItem item : items) {
+            if (item.getItemId() != null
+                    && item.getItemId().equals(foodId)) {
+
+                existingItem = item;
+                break;
+            }
+        }
+
+        if (existingItem != null) {
+
+            // Same food already exists → increase quantity
+            int newQuantity = existingItem.getQuantity()
+                    + cartItem.getQuantity();
+
+            existingItem.setQuantity(newQuantity);
+
+            existingItem.setTotalPrice(
+                    existingItem.getUnitPrice() * newQuantity);
+
+        } else {
+
+            // New food → add new cart item
+            cartItem.setItemType("FOOD");
+            cartItem.setName(food.getName());
+            cartItem.setUnitPrice(price);
+            cartItem.setTotalPrice(
+                    price * cartItem.getQuantity());
+
+            items.add(cartItem);
+        }
 
         cart.setItems(items);
 
-        // Calculate cart subtotal
+        // Recalculate subtotal
         double subtotal = 0;
 
         for (CartItem item : items) {
@@ -75,29 +102,28 @@ public class CartService {
 
         cart.setSubtotal(subtotal);
 
-        // Delivery settings
+        // Delivery
         double freeDeliveryAbove = 200;
         double deliveryCharge = 30;
-
-        cart.setFreeDeliveryAbove(freeDeliveryAbove);
 
         if (subtotal >= freeDeliveryAbove) {
             deliveryCharge = 0;
         }
 
+        cart.setFreeDeliveryAbove(freeDeliveryAbove);
         cart.setDeliveryCharge(deliveryCharge);
 
-        // Amount needed for free delivery
         double amountForFreeDelivery = freeDeliveryAbove - subtotal;
 
         if (amountForFreeDelivery < 0) {
             amountForFreeDelivery = 0;
         }
 
-        cart.setAmountForFreeDelivery(amountForFreeDelivery);
+        cart.setAmountForFreeDelivery(
+                amountForFreeDelivery);
 
-        // Final total
-        cart.setTotal(subtotal + deliveryCharge);
+        cart.setTotal(
+                subtotal + deliveryCharge);
 
         return cartRepository.save(cart);
     }
